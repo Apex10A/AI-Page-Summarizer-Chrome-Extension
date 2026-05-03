@@ -31,50 +31,68 @@ async function handleSummarize(content) {
               "The extension is properly configured for background processing.",
               "Security rules are followed: the API key is handled only in the service worker."
             ],
-            readingTime: '1 min'
+            readingTime: '1 min read'
           }
         });
       }, 1500);
     });
   }
 
-  // Real API call logic
+  const prompt = `You are a helpful assistant that summarises web pages.
+Given the following page content, return a JSON object with exactly this shape:
+{"bullets": ["key point 1", "key point 2", "key point 3"],"insights": ["insight 1", "insight 2"],"readingTime": "X min read"}
+Return only the JSON. No explanation. No markdown.
+Page content:
+${content}`;
+
   try {
-    const response = await fetch(CONFIG.API_URL, {
+    const url = `${CONFIG.GEMINI_API_URL}?key=${CONFIG.AI_API_KEY}`;
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${CONFIG.AI_API_KEY}`
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: "gpt-3.5-turbo",
-        messages: [
-          {
-            role: "system",
-            content: "Summarize the following text. Return a JSON object with 'bullets' (array of strings), 'insights' (array of strings), and 'readingTime' (string)."
-          },
-          {
-            role: "user",
-            content: content
-          }
-        ],
-        response_format: { type: "json_object" }
+        contents: [{
+          parts: [{ text: prompt }]
+        }]
       })
     });
 
     if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Gemini API error details:', errorData);
       throw new Error(`API error: ${response.statusText}`);
     }
 
     const data = await response.json();
-    // Assuming the AI returns a JSON string in the expected format
-    const aiResponse = JSON.parse(data.choices[0].message.content);
+    
+    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts[0].text) {
+      throw new Error('Unexpected response format from Gemini API');
+    }
 
-    return {
-      success: true,
-      summary: aiResponse
-    };
+    let textResponse = data.candidates[0].content.parts[0].text.trim();
+    
+    // Remove markdown code blocks if the AI included them despite instructions
+    if (textResponse.startsWith('```')) {
+      textResponse = textResponse.replace(/^```json\n?/, '').replace(/\n?```$/, '').trim();
+    }
+
+    try {
+      const aiResponse = JSON.parse(textResponse);
+      return {
+        success: true,
+        summary: aiResponse
+      };
+    } catch (parseError) {
+      console.error('Failed to parse Gemini response:', textResponse);
+      return {
+        success: false,
+        error: 'The AI returned an invalid response format. Please try again.'
+      };
+    }
   } catch (error) {
-    throw new Error('Failed to connect to AI service. Please check your API key and connection.');
+    console.error('Fetch error:', error);
+    throw new Error('Failed to connect to Gemini AI. Please check your API key and connection.');
   }
 }
