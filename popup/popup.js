@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const pageTitle = document.getElementById('page-title');
   const summarizeBtn = document.getElementById('summarize-btn');
   const clearBtn = document.getElementById('clear-btn');
+  const copyBtn = document.getElementById('copy-btn');
   const loadingSpinner = document.getElementById('loading-spinner');
   const errorMessage = document.getElementById('error-message');
   const summaryContainer = document.getElementById('summary-container');
@@ -38,7 +39,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (response && response.success) {
         displaySummary(response.summary);
       } else {
-        showError("Summary failed. Please try again.");
+        showError(response?.error || "Summary failed. Please try again.");
       }
     } catch (error) {
       console.error('Error communicating with background script:', error);
@@ -59,7 +60,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let html = '';
     
     if (summary.readingTime) {
-      html += `<p><strong>Reading Time:</strong> ${summary.readingTime}</p>`;
+      html += `<span class="reading-time">⏱️ ${summary.readingTime}</span>`;
     }
 
     if (summary.bullets && summary.bullets.length > 0) {
@@ -71,11 +72,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     if (summary.insights && summary.insights.length > 0) {
-      html += `<h3>Insights</h3><ul>`;
+      html += `<div class="insights-section"><h3>Insights</h3><ul>`;
       summary.insights.forEach(insight => {
         html += `<li>${insight}</li>`;
       });
-      html += `</ul>`;
+      html += `</ul></div>`;
     }
 
     summaryContent.innerHTML = html;
@@ -123,6 +124,20 @@ document.addEventListener('DOMContentLoaded', async () => {
       // Most common cause of error here is the content script not being injected yet
       showError("Please refresh the page and try again.");
     }
+  });
+
+  // Copy button handler
+  copyBtn.addEventListener('click', () => {
+    const textToCopy = summaryContent.innerText;
+    navigator.clipboard.writeText(textToCopy).then(() => {
+      const originalText = copyBtn.textContent;
+      copyBtn.textContent = 'Copied!';
+      setTimeout(() => {
+        copyBtn.textContent = originalText;
+      }, 2000);
+    }).catch(err => {
+      console.error('Failed to copy text: ', err);
+    });
   });
 
   // Clear button handler
