@@ -1,10 +1,134 @@
 body {
-  width: 300px;
-  padding: 10px;
-  font-family: sans-serif;
+  width: 320px;
+  margin: 0;
+  padding: 16px;
+  font-family: 'Gabarito', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #333;
+  background-color: #f9f9f9;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-#result {
-  margin-top: 10px;
-  white-space: pre-wrap;
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+header h1 {
+  font-size: 1.2rem;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #1a1a1a;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+button {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  background-color: #fff;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+button:hover {
+  background-color: #f0f0f0;
+}
+
+button:focus-visible {
+  outline: 2px solid #007bff;
+  outline-offset: 2px;
+}
+
+#summarize-btn {
+  background-color: #A05;
+  color: white;
+  font-family: "Gabarito", sans-serif;
+  /* border-color: #0056b3; */
+}
+
+#summarize-btn:hover {
+  background-color: #F08;
+}
+
+#clear-btn {
+  background-color: #6c757d;
+  color: white;
+  font-family: "Gabarito", sans-serif;
+  border-color: #545b62;
+}
+
+#clear-btn:hover {
+  background-color: #5a6268;
+}
+
+.hidden {
+  display: none !important;
+}
+
+#loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 20px 0;
+}
+
+.spinner {
+  width: 30px;
+  height: 30px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #007bff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+#summary-container {
+  border-top: 1px solid #ddd;
+  padding-top: 12px;
+}
+
+#summary-container h2 {
+  font-size: 1rem;
+  margin: 0 0 8px 0;
+}
+
+#summary-content {
+  max-height: 250px;
+  overflow-y: auto;
+  padding: 8px;
+  background: white;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  line-height: 1.5;
+  font-size: 0.95rem;
+}
+
+#summary-content:focus-visible {
+  outline: 2px solid #007bff;
+}
+
+.error {
+  color: #d32f2f;
+  background-color: #fdecea;
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  border: 1px solid #f5c6cb;
 }

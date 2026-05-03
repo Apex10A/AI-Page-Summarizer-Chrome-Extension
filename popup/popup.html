@@ -1,13 +1,39 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI Summarizer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Gabarito:wght@400..900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <h1>AI Summarizer</h1>
-  <button id="summarize">Summarize Page</button>
-  <div id="result"></div>
+  <div class="container">
+    <header>
+      <h1 id="page-title">Loading...</h1>
+    </header>
+
+    <main>
+      <div class="actions">
+        <button id="summarize-btn">Summarize Page</button>
+        <button id="clear-btn">Clear</button>
+      </div>
+
+      <div id="loading-spinner" class="hidden" aria-hidden="true">
+        <div class="spinner"></div>
+        <p>Summarizing...</p>
+      </div>
+
+      <div id="error-message" class="error hidden" role="alert"></div>
+
+      <div id="summary-container" class="hidden">
+        <h2>Summary</h2>
+        <div id="summary-content" tabindex="0"></div>
+      </div>
+    </main>
+  </div>
   <script src="popup.js"></script>
 </body>
 </html>
