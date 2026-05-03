@@ -5,8 +5,7 @@
   "description": "Summarize web pages using AI.",
   "permissions": [
     "activeTab",
-    "storage",
-    "scripting"
+    "storage"
   ],
   "background": {
     "service_worker": "background/service-worker.js"

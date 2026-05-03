@@ -56,30 +56,48 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    // Format the summary structured data into the display area
-    let html = '';
+    // Clear previous content
+    summaryContent.innerHTML = '';
     
     if (summary.readingTime) {
-      html += `<span class="reading-time">⏱️ ${summary.readingTime}</span>`;
+      const timeSpan = document.createElement('span');
+      timeSpan.className = 'reading-time';
+      timeSpan.textContent = `⏱️ ${summary.readingTime}`;
+      summaryContent.appendChild(timeSpan);
     }
 
     if (summary.bullets && summary.bullets.length > 0) {
-      html += `<h3>Key Points</h3><ul>`;
+      const title = document.createElement('h3');
+      title.textContent = 'Key Points';
+      summaryContent.appendChild(title);
+
+      const ul = document.createElement('ul');
       summary.bullets.forEach(bullet => {
-        html += `<li>${bullet}</li>`;
+        const li = document.createElement('li');
+        li.textContent = bullet;
+        ul.appendChild(li);
       });
-      html += `</ul>`;
+      summaryContent.appendChild(ul);
     }
 
     if (summary.insights && summary.insights.length > 0) {
-      html += `<div class="insights-section"><h3>Insights</h3><ul>`;
+      const insightsDiv = document.createElement('div');
+      insightsDiv.className = 'insights-section';
+      
+      const title = document.createElement('h3');
+      title.textContent = 'Insights';
+      insightsDiv.appendChild(title);
+
+      const ul = document.createElement('ul');
       summary.insights.forEach(insight => {
-        html += `<li>${insight}</li>`;
+        const li = document.createElement('li');
+        li.textContent = insight;
+        ul.appendChild(li);
       });
-      html += `</ul></div>`;
+      insightsDiv.appendChild(ul);
+      summaryContent.appendChild(insightsDiv);
     }
 
-    summaryContent.innerHTML = html;
     summaryContainer.classList.remove('hidden');
   }
 
