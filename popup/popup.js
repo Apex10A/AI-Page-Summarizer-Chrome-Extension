@@ -31,7 +31,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       const response = await chrome.runtime.sendMessage({ 
         type: 'SUMMARIZE', 
-        content: text 
+        content: text,
+        url: currentTab.url
       });
 
       if (response && response.success) {

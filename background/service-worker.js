@@ -2,9 +2,11 @@ importScripts('../config.js');
 
 console.log("Background service worker initialized.");
 
+const CACHE_EXPIRATION_MS = 24 * 60 * 60 * 1000; // 24 hours
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === 'SUMMARIZE') {
-    handleSummarize(request.content)
+    handleSummarize(request.content, request.url)
       .then(response => sendResponse(response))
       .catch(error => {
         console.error('Summarization error:', error);
@@ -14,25 +16,63 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-async function handleSummarize(content) {
+async function handleSummarize(content, url) {
+  const cacheKey = `summary_${url}`;
+  
+  // 1. Check cache first if URL is provided
+  if (url) {
+    try {
+      const cachedData = await chrome.storage.local.get(cacheKey);
+      if (cachedData[cacheKey]) {
+        const { summary, timestamp } = cachedData[cacheKey];
+        const isExpired = Date.now() - timestamp > CACHE_EXPIRATION_MS;
+        
+        if (!isExpired) {
+          console.log('Returning cached summary for:', url);
+          return {
+            success: true,
+            summary: summary,
+            cached: true
+          };
+        } else {
+          console.log('Cache expired for:', url);
+        }
+      }
+    } catch (error) {
+      console.warn('Error reading from cache:', error);
+    }
+  }
+
   // If no API key is set, return a mock response for development purposes
   if (!CONFIG.AI_API_KEY || CONFIG.AI_API_KEY === 'YOUR_API_KEY_HERE') {
+    const mockSummary = {
+      bullets: [
+        "This is a mock bullet point based on your page content.",
+        "The system correctly extracted and sent the text to the background.",
+        "Add a real API key in config.js to get actual AI summaries."
+      ],
+      insights: [
+        "The extension is properly configured for background processing.",
+        "Security rules are followed: the API key is handled only in the service worker."
+      ],
+      readingTime: '1 min read'
+    };
+
+    // Even mock summaries can be cached
+    if (url) {
+      await chrome.storage.local.set({
+        [cacheKey]: {
+          summary: mockSummary,
+          timestamp: Date.now()
+        }
+      });
+    }
+
     return new Promise(resolve => {
       setTimeout(() => {
         resolve({
           success: true,
-          summary: {
-            bullets: [
-              "This is a mock bullet point based on your page content.",
-              "The system correctly extracted and sent the text to the background.",
-              "Add a real API key in config.js to get actual AI summaries."
-            ],
-            insights: [
-              "The extension is properly configured for background processing.",
-              "Security rules are followed: the API key is handled only in the service worker."
-            ],
-            readingTime: '1 min read'
-          }
+          summary: mockSummary
         });
       }, 1500);
     });
@@ -46,8 +86,8 @@ Page content:
 ${content}`;
 
   try {
-    const url = `${CONFIG.GEMINI_API_URL}?key=${CONFIG.AI_API_KEY}`;
-    const response = await fetch(url, {
+    const apiUrl = `${CONFIG.GEMINI_API_URL}?key=${CONFIG.AI_API_KEY}`;
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -67,7 +107,19 @@ ${content}`;
 
     const data = await response.json();
     
-    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts[0].text) {
+    if (data.promptFeedback && data.promptFeedback.blockReason) {
+      throw new Error(`AI blocked content: ${data.promptFeedback.blockReason}`);
+    }
+
+    if (!data.candidates || !data.candidates[0]) {
+      throw new Error('AI could not generate a response for this content.');
+    }
+
+    if (data.candidates[0].finishReason === 'SAFETY' || data.candidates[0].finishReason === 'RECITATION') {
+      throw new Error(`AI refused to summarize: ${data.candidates[0].finishReason}`);
+    }
+
+    if (!data.candidates[0].content || !data.candidates[0].content.parts[0].text) {
       throw new Error('Unexpected response format from Gemini API');
     }
 
@@ -80,6 +132,17 @@ ${content}`;
 
     try {
       const aiResponse = JSON.parse(textResponse);
+      
+      // Save to cache
+      if (url) {
+        await chrome.storage.local.set({
+          [cacheKey]: {
+            summary: aiResponse,
+            timestamp: Date.now()
+          }
+        });
+      }
+
       return {
         success: true,
         summary: aiResponse
@@ -93,6 +156,6 @@ ${content}`;
     }
   } catch (error) {
     console.error('Fetch error:', error);
-    throw new Error('Failed to connect to Gemini AI. Please check your API key and connection.');
+    throw new Error(`Failed to connect to Gemini AI: ${error.message}`);
   }
 }
