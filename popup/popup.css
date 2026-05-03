@@ -1,0 +1,10 @@
+body {
+  width: 300px;
+  padding: 10px;
+  font-family: sans-serif;
+}
+
+#result {
+  margin-top: 10px;
+  white-space: pre-wrap;
+}
