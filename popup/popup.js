@@ -25,27 +25,75 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Listen for messages from content script
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.type === 'PAGE_CONTENT') {
-      console.log('Received page content:', request.content);
-      // For now, we just display the extracted text as a "summary" to confirm it works
-      // In the next step, this would be sent to an AI for actual summarization
-      displaySummary(request.content);
+      console.log('Received page content, sending to background...');
+      summarizeContent(request.content);
     }
   });
 
-  function displaySummary(text) {
-    loadingSpinner.classList.add('hidden');
-    summarizeBtn.disabled = false;
-    
+  async function summarizeContent(text) {
     if (!text || text.trim().length === 0) {
-      errorMessage.textContent = "Could not find any meaningful content to summarize.";
-      errorMessage.classList.remove('hidden');
+      showError("Could not find any meaningful content to summarize.");
       return;
     }
 
-    // Mocking the AI part for now by showing the first few hundred characters of extracted text
-    const previewText = text.length > 500 ? text.substring(0, 500) + "..." : text;
-    summaryContent.textContent = "Extracted Content Preview:\n\n" + previewText;
+    try {
+      const response = await chrome.runtime.sendMessage({ 
+        type: 'SUMMARIZE', 
+        content: text 
+      });
+
+      if (response && response.success) {
+        displaySummary(response.summary);
+      } else {
+        showError(response?.error || "Failed to generate summary.");
+      }
+    } catch (error) {
+      console.error('Error communicating with background script:', error);
+      showError("Connection error. Please try again.");
+    }
+  }
+
+  function displaySummary(summary) {
+    loadingSpinner.classList.add('hidden');
+    summarizeBtn.disabled = false;
+    
+    if (!summary) {
+      showError("AI returned an empty summary.");
+      return;
+    }
+
+    // Format the summary structured data into the display area
+    let html = '';
+    
+    if (summary.readingTime) {
+      html += `<p><strong>Reading Time:</strong> ${summary.readingTime}</p>`;
+    }
+
+    if (summary.bullets && summary.bullets.length > 0) {
+      html += `<h3>Key Points</h3><ul>`;
+      summary.bullets.forEach(bullet => {
+        html += `<li>${bullet}</li>`;
+      });
+      html += `</ul>`;
+    }
+
+    if (summary.insights && summary.insights.length > 0) {
+      html += `<h3>Insights</h3><ul>`;
+      summary.insights.forEach(insight => {
+        html += `<li>${insight}</li>`;
+      });
+      html += `</ul>`;
+    }
+
+    summaryContent.innerHTML = html;
     summaryContainer.classList.remove('hidden');
+  }
+
+  function showError(message) {
+    loadingSpinner.classList.add('hidden');
+    summarizeBtn.disabled = false;
+    errorMessage.textContent = message;
+    errorMessage.classList.remove('hidden');
   }
 
   // Summarize button handler
@@ -62,10 +110,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       await chrome.tabs.sendMessage(currentTabId, { type: 'EXTRACT_CONTENT' });
     } catch (error) {
       console.error('Error sending message to content script:', error);
-      errorMessage.textContent = "Please refresh the page and try again.";
-      errorMessage.classList.remove('hidden');
-      loadingSpinner.classList.add('hidden');
-      summarizeBtn.disabled = false;
+      showError("Please refresh the page and try again.");
     }
   });
 
@@ -74,7 +119,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     errorMessage.classList.add('hidden');
     summaryContainer.classList.add('hidden');
     loadingSpinner.classList.add('hidden');
-    summaryContent.textContent = '';
+    summaryContent.innerHTML = '';
     summarizeBtn.disabled = false;
   });
 });
