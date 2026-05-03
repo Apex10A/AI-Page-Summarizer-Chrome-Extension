@@ -8,11 +8,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const summaryContent = document.getElementById('summary-content');
 
   // Get current tab info
-  let currentTabId = null;
+  let currentTab = null;
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (tab) {
-      currentTabId = tab.id;
+      currentTab = tab;
       pageTitle.textContent = tab.title || 'Unknown Page';
     } else {
       pageTitle.textContent = 'AI Summarizer';
@@ -22,17 +22,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     pageTitle.textContent = 'AI Summarizer';
   }
 
-  // Listen for messages from content script
-  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.type === 'PAGE_CONTENT') {
-      console.log('Received page content, sending to background...');
-      summarizeContent(request.content);
-    }
-  });
-
   async function summarizeContent(text) {
     if (!text || text.trim().length === 0) {
-      showError("Could not find any meaningful content to summarize.");
+      showError("Could not read this page");
       return;
     }
 
@@ -45,11 +37,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (response && response.success) {
         displaySummary(response.summary);
       } else {
-        showError(response?.error || "Failed to generate summary.");
+        showError("Summary failed. Please try again.");
       }
     } catch (error) {
       console.error('Error communicating with background script:', error);
-      showError("Connection error. Please try again.");
+      showError("Summary failed. Please try again.");
     }
   }
 
@@ -58,7 +50,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     summarizeBtn.disabled = false;
     
     if (!summary) {
-      showError("AI returned an empty summary.");
+      showError("Summary failed. Please try again.");
       return;
     }
 
@@ -98,18 +90,36 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Summarize button handler
   summarizeBtn.addEventListener('click', async () => {
-    if (!currentTabId) return;
+    if (!currentTab) return;
 
     errorMessage.classList.add('hidden');
     summaryContainer.classList.add('hidden');
+    
+    // Check for chrome internal pages
+    if (currentTab.url && (currentTab.url.startsWith('chrome://') || currentTab.url.startsWith('edge://') || currentTab.url.startsWith('about:'))) {
+      showError("Cannot summarise this page");
+      return;
+    }
+
     loadingSpinner.classList.remove('hidden');
     summarizeBtn.disabled = true;
 
     try {
-      // Trigger extraction in content script
-      await chrome.tabs.sendMessage(currentTabId, { type: 'EXTRACT_CONTENT' });
+      // Trigger extraction in content script and wait for response
+      const response = await chrome.tabs.sendMessage(currentTab.id, { type: 'GET_CONTENT' });
+      
+      if (response && response.success) {
+        if (!response.content || response.content.trim().length === 0) {
+          showError("Could not find any readable content on this page.");
+        } else {
+          await summarizeContent(response.content);
+        }
+      } else {
+        showError("Could not read this page. Try refreshing it.");
+      }
     } catch (error) {
       console.error('Error sending message to content script:', error);
+      // Most common cause of error here is the content script not being injected yet
       showError("Please refresh the page and try again.");
     }
   });

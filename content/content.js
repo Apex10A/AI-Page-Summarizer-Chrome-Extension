@@ -1,6 +1,11 @@
 function extractPageContent() {
   // Extraction priority: article -> main -> body
-  let root = document.querySelector('article') || document.querySelector('main') || document.body;
+  let root = document.querySelector('article') || document.querySelector('main');
+  
+  // If article or main is found but empty, or not found at all, fallback to body
+  if (!root || root.innerText.trim().length === 0) {
+    root = document.body;
+  }
   
   if (!root) return '';
 
@@ -38,12 +43,14 @@ function extractPageContent() {
 
 // Listen for messages from the popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.type === 'EXTRACT_CONTENT') {
-    const extractedText = extractPageContent();
-    chrome.runtime.sendMessage({ 
-      type: 'PAGE_CONTENT', 
-      content: extractedText 
-    });
-    sendResponse({ success: true });
+  if (request.type === 'GET_CONTENT') {
+    try {
+      const extractedText = extractPageContent();
+      sendResponse({ success: true, content: extractedText });
+    } catch (error) {
+      console.error('Extraction error:', error);
+      sendResponse({ success: false, error: error.message });
+    }
+    return true;
   }
 });
