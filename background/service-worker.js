@@ -43,41 +43,6 @@ async function handleSummarize(content, url) {
     }
   }
 
-  // If no API key is set, return a mock response for development purposes
-  if (!CONFIG.AI_API_KEY || CONFIG.AI_API_KEY === 'YOUR_API_KEY_HERE') {
-    const mockSummary = {
-      bullets: [
-        "This is a mock bullet point based on your page content.",
-        "The system correctly extracted and sent the text to the background.",
-        "Add a real API key in config.js to get actual AI summaries."
-      ],
-      insights: [
-        "The extension is properly configured for background processing.",
-        "Security rules are followed: the API key is handled only in the service worker."
-      ],
-      readingTime: '1 min read'
-    };
-
-    // Even mock summaries can be cached
-    if (url) {
-      await chrome.storage.local.set({
-        [cacheKey]: {
-          summary: mockSummary,
-          timestamp: Date.now()
-        }
-      });
-    }
-
-    return new Promise(resolve => {
-      setTimeout(() => {
-        resolve({
-          success: true,
-          summary: mockSummary
-        });
-      }, 1500);
-    });
-  }
-
   const prompt = `You are a helpful assistant that summarises web pages.
 Given the following page content, return a JSON object with exactly this shape:
 {"bullets": ["key point 1", "key point 2", "key point 3"],"insights": ["insight 1", "insight 2"],"readingTime": "X min read"}
@@ -99,11 +64,14 @@ ${content}`;
       })
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Gemini API error details:', errorData);
-      throw new Error(`API error: ${response.statusText}`);
-    }
+   if (!response.ok) {
+  const errorData = await response.json();
+  console.error('Gemini API error details:', errorData);
+  console.error('Status code:', response.status);
+  console.error('Status text:', response.statusText);
+  console.error('Full error message:', JSON.stringify(errorData, null, 2));
+  throw new Error(`API error ${response.status}: ${errorData?.error?.message || response.statusText}`);
+}
 
     const data = await response.json();
     
