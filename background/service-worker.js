@@ -34,8 +34,6 @@ async function handleSummarize(content, url) {
             summary: summary,
             cached: true
           };
-        } else {
-          console.log('Cache expired for:', url);
         }
       }
     } catch (error) {
@@ -43,35 +41,22 @@ async function handleSummarize(content, url) {
     }
   }
 
-  const prompt = `You are a helpful assistant that summarises web pages.
-Given the following page content, return a JSON object with exactly this shape:
-{"bullets": ["key point 1", "key point 2", "key point 3"],"insights": ["insight 1", "insight 2"],"readingTime": "X min read"}
-Return only the JSON. No explanation. No markdown.
-Page content:
-${content}`;
-
   try {
-    const apiUrl = `${CONFIG.GEMINI_API_URL}?key=${CONFIG.AI_API_KEY}`;
-    const response = await fetch(apiUrl, {
+    // Call our new proxy endpoint
+    const response = await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        contents: [{
-          parts: [{ text: prompt }]
-        }]
+        content: content
       })
     });
 
    if (!response.ok) {
-  const errorData = await response.json();
-  console.error('Gemini API error details:', errorData);
-  console.error('Status code:', response.status);
-  console.error('Status text:', response.statusText);
-  console.error('Full error message:', JSON.stringify(errorData, null, 2));
-  throw new Error(`API error ${response.status}: ${errorData?.error?.message || response.statusText}`);
-}
+     const errorData = await response.json();
+     throw new Error(`Proxy error ${response.status}: ${errorData?.error || response.statusText}`);
+   }
 
     const data = await response.json();
     
@@ -93,7 +78,6 @@ ${content}`;
 
     let textResponse = data.candidates[0].content.parts[0].text.trim();
     
-    // Remove markdown code blocks if the AI included them despite instructions
     if (textResponse.startsWith('```')) {
       textResponse = textResponse.replace(/^```json\n?/, '').replace(/\n?```$/, '').trim();
     }
@@ -116,7 +100,7 @@ ${content}`;
         summary: aiResponse
       };
     } catch (parseError) {
-      console.error('Failed to parse Gemini response:', textResponse);
+      console.error('Failed to parse response:', textResponse);
       return {
         success: false,
         error: 'The AI returned an invalid response format. Please try again.'
@@ -124,6 +108,6 @@ ${content}`;
     }
   } catch (error) {
     console.error('Fetch error:', error);
-    throw new Error(`Failed to connect to Gemini AI: ${error.message}`);
+    throw new Error(`${error.message}`);
   }
 }
