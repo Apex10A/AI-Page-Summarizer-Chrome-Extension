@@ -10,7 +10,8 @@
     "clipboardWrite"
   ],
   "host_permissions": [
-    "https://generativelanguage.googleapis.com/*"
+    "http://localhost:3000/*",
+    "https://*.vercel.app/*"
   ],
   "background": {
     "service_worker": "background/service-worker.js"
