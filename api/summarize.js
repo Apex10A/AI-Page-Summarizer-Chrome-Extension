@@ -13,7 +13,7 @@ export default async function handler(req, res) {
 
   // 2. Get API Key from Environment Variables (set in Vercel dashboard)
   const API_KEY = process.env.GEMINI_AI_API_KEY;
-  const API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-001:generateContent';
+  const API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent';
 
   if (!API_KEY) {
     return res.status(500).json({ error: 'Server configuration error: Missing API Key' });
