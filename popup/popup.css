@@ -203,20 +203,7 @@ button:focus-visible {
 }
 
 #summary-content {
-  max-height: 400px;
-  overflow-y: auto;
   padding: 4px;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-color) transparent;
-}
-
-#summary-content::-webkit-scrollbar {
-  width: 6px;
-}
-
-#summary-content::-webkit-scrollbar-thumb {
-  background-color: var(--border-color);
-  border-radius: 3px;
 }
 
 .reading-time {
